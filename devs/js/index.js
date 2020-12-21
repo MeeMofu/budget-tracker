@@ -94,6 +94,7 @@ function statusNotif (isConnected){
   const body = isConnected ? "Everything is up to date!" : "Please connect to your internet to upload changes";
   return new Notification(title, {body: body, icon: icon});
 }
+
 let db;
 const request = indexedDB.open('budget_manager', 1);
 
