@@ -7,8 +7,10 @@
   <meta name="theme-color" content="#317EFB">
   <link rel="shortcut icon" href="icons/icon-192x192.png" type="image/x-icon">
 
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+  <!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> -->
   <link rel="stylesheet" href="css/styles.css">
+
+  <link rel="manifest" href="manifest.json">
 
   <title>Budget Tracker</title>
 </head>
@@ -42,6 +44,18 @@
   </div>
 
   <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script> -->
-  <script src="js/index.js"></script>
+  <script src="js/index.bundle.js"></script>
+  <!-- start service worker -->
+  <script type="text/javascript">
+    (function() {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .register("service-worker.js")
+          .catch(error =>
+            alert("Your browser might not provide the best experience")
+          );
+      }
+    })();
+  </script>
 </body>
 </html>

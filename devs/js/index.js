@@ -1,3 +1,4 @@
+require('chart.js')
 let transactions = [];
 let myChart;
 
@@ -78,6 +79,18 @@ function populateChart() {
   });
 }
 
+function sendNotif(isAdding,amount,isConnected){
+  const title = "Budget Manager";
+  const icon = "../icons/icon-512x512.png";
+  if (isConnected) {
+    const body = isAdding ? `You've successfully added ${amount}$` : `You've successfully subtracted ${amount}$`;
+    return new Notification(title, {body: body, icon: icon});
+  } else {
+    const body = "Please connect to your internet to upload changes";
+    return new Notification(title, {body: body, icon: icon});
+  }
+}
+
 function sendTransaction(isAdding) {
   let nameEl = document.querySelector("#t-name");
   let amountEl = document.querySelector("#t-amount");
@@ -129,6 +142,7 @@ function sendTransaction(isAdding) {
       errorEl.textContent = "Missing Information";
     }
     else {
+      sendNotif(isAdding,amountEl.value,true);
       // clear form
       nameEl.value = "";
       amountEl.value = "";
@@ -136,6 +150,7 @@ function sendTransaction(isAdding) {
   })
   .catch(err => {
     // fetch failed, so save in indexed db
+    sendNotif(isAdding,amountEl.value,false);
     saveRecord(transaction);
 
     // clear form
@@ -144,6 +159,8 @@ function sendTransaction(isAdding) {
   });
 }
 
+
+
 document.querySelector("#add-btn").onclick = function() {
   sendTransaction(true);
 };
@@ -151,3 +168,5 @@ document.querySelector("#add-btn").onclick = function() {
 document.querySelector("#sub-btn").onclick = function() {
   sendTransaction(false);
 };
+
+Notification.requestPermission()
