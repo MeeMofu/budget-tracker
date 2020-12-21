@@ -79,17 +79,89 @@ function populateChart() {
   });
 }
 
-function sendNotif(isAdding,amount,isConnected){
-  const title = "Budget Manager";
-  const icon = "../icons/icon-512x512.png";
-  if (isConnected) {
-    const body = isAdding ? `You've successfully added ${amount}$` : `You've successfully subtracted ${amount}$`;
-    return new Notification(title, {body: body, icon: icon});
-  } else {
-    const body = "Please connect to your internet to upload changes";
-    return new Notification(title, {body: body, icon: icon});
-  }
+// Values for Notifications
+
+const title = "Budget Manager";
+const icon = "../icons/icon-512x512.png";
+
+function sendNotif(isAdding,amount){
+  const body = isAdding ? `You've successfully added ${amount}$` : `You've successfully subtracted ${amount}$`;
+  return new Notification(title, {body: body, icon: icon});
+
 }
+
+function statusNotif (isConnected){
+  const body = isConnected ? "Everything is up to date!" : "Please connect to your internet to upload changes";
+  return new Notification(title, {body: body, icon: icon});
+}
+let db;
+const request = indexedDB.open('budget_manager', 1);
+
+request.onupgradeneeded = function(event) {
+  const db = event.target.result;
+  db.createObjectStore('offline_record', { autoIncrement: true });
+};
+
+function uploadRecord() {
+  // open a transaction on your pending db
+  const transaction = db.transaction(['offline_record'], 'readwrite');
+
+  // access your pending object store
+  const transactionObjectStore = transaction.objectStore('offline_record');
+
+  // get all records from store and set to a variable
+  const getAll = transactionObjectStore.getAll();
+
+  getAll.onsuccess = function() {
+    // if there was data in indexedDb's store, let's send it to the api server
+    if (getAll.result.length > 0) {
+      fetch('/api/transaction/bulk', {
+        method: 'POST',
+        body: JSON.stringify(getAll.result),
+        headers: {
+          Accept: 'application/json, text/plain, */*',
+          'Content-Type': 'application/json'
+        }
+      })
+        .then(response => response.json())
+        .then(serverResponse => {
+          if (serverResponse.message) {
+            throw new Error(serverResponse);
+          }
+
+          const transaction = db.transaction(['offline_record'], 'readwrite');
+          const transactionObjectStore = transaction.objectStore('offline_record');
+          // clear all items in your store
+          transactionObjectStore.clear();
+          // Let user knows that everything is updated
+          statusNotif(true);
+        })
+        .catch(err => {
+          // set reference to redirect back here
+          console.log(err);
+        });
+    }
+  };
+}
+
+request.onsuccess = function(event) {
+  db = event.target.result;
+
+  // check if app is online, if yes run checkDatabase() function to send all local db data to api
+  if (navigator.onLine) {
+    uploadRecord();
+  }
+};
+
+function saveRecord(record) {
+  const transaction = db.transaction(['offline_record'], 'readwrite');
+
+  const transactionObjectStore = transaction.objectStore('offline_record');
+
+  // add record to your store with add method.
+  transactionObjectStore.add(record);
+}
+
 
 function sendTransaction(isAdding) {
   let nameEl = document.querySelector("#t-name");
@@ -142,7 +214,7 @@ function sendTransaction(isAdding) {
       errorEl.textContent = "Missing Information";
     }
     else {
-      sendNotif(isAdding,amountEl.value,true);
+      sendNotif(isAdding,amountEl.value);
       // clear form
       nameEl.value = "";
       amountEl.value = "";
@@ -150,7 +222,7 @@ function sendTransaction(isAdding) {
   })
   .catch(err => {
     // fetch failed, so save in indexed db
-    sendNotif(isAdding,amountEl.value,false);
+    statusNotif(false);
     saveRecord(transaction);
 
     // clear form
@@ -169,4 +241,7 @@ document.querySelector("#sub-btn").onclick = function() {
   sendTransaction(false);
 };
 
-Notification.requestPermission()
+Notification.requestPermission();
+
+// listen for app coming back online
+window.addEventListener('online', uploadRecord);
