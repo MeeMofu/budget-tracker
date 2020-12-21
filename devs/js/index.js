@@ -132,10 +132,23 @@ function uploadRecord() {
 
           const transaction = db.transaction(['offline_record'], 'readwrite');
           const transactionObjectStore = transaction.objectStore('offline_record');
-          // clear all items in your store
+          // clear all items in store
           transactionObjectStore.clear();
           // Let user knows that everything is updated
           statusNotif(true);
+          // Get new infomation
+          fetch("/api/transaction")
+            .then(response => {
+              return response.json();
+            })
+            .then(data => {
+              // save db data on global variable
+              transactions = data;
+
+              populateTotal();
+              populateTable();
+              populateChart();
+            });
         })
         .catch(err => {
           // set reference to redirect back here
